@@ -1,0 +1,79 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 27
+    defaultConfig {
+        minSdkVersion 10
+        targetSdkVersion 27
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+    }
+//    lintOptions {
+//        abortOnError false
+//    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    buildToolsVersion '28.0.2'
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+}
+
+
+def releaseJarPath='build/outputs/libs'
+def defaultJarName="PlayMad-Conversion-Tracking-SDK.jar"
+def proguardJarName="PlayMad-Conversion-Tracking-SDK-mini.jar"
+
+task clearJar(type: Delete) {
+    delete(releaseJarPath+'/'+defaultJarName)
+    delete(releaseJarPath+'/'+proguardJarName)
+}
+
+// 自定义jar任务打包jar
+task makeJar(type: Jar, dependsOn: ['compileReleaseJavaWithJavac']) {
+    // jar包名称，或者用baseName
+    archiveName = defaultJarName
+    // jar生成后存放的目标目录
+    destinationDir = file(releaseJarPath)
+    // jar所需的class文件的源目录
+    from('build/intermediates/classes/release/cn/playmad/ads/gtch/google/com/playmadsdk/')
+    // jar打包后的目录结构
+    into('cn/playmad/ads/gtch/google/com/playmadsdk/')
+    // jar打包去除的目录和文件
+    exclude('BuildConfig.class', 'R.class')
+    // 去掉R$开头的文件
+    exclude{it.name.startsWith('R$');}
+}
+
+// 拷贝默认生成的jar
+//task makeJar(type: Copy) {
+//    delete('build/outputs/libs/playmad-conversion-sdk.jar')
+//    from('build/intermediates/intermediate-jars/release/')
+//    into('build/outputs/libs/')
+//    include('classes.jar')
+//    rename('classes.jar', 'playmad-conversion-sdk.jar')
+//}
+
+makeJar.dependsOn(clearJar, build)
+
+//def androidSDKDir = project.android.sdkDirectory.absolutePath
+//def androidJarDir = androidSDKDir.toString() + '/platforms/' + "${android.compileSdkVersion}" + '/android.jar'
+//
+//task proguardJar(type: proguard.gradle.ProGuardTask, dependsOn: ['makeJar']) {
+//    injars('build/outputs/libs/playmad-conversion-sdk.jar')
+//    outjars('build/outputs/libs/playmad-conversion-sdk-mini.jar')
+//    libraryjars(androidJarDir)
+//    configuration 'proguard-rules.pro'
+//}

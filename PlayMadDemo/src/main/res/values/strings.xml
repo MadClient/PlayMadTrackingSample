@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PlayMadTrackingSample</string>
+    <string name="btn1_name">OPEN</string>
+    <string name="btn2_name">SIGNUP</string>
+    <string name="btn3_name">SIGNIN</string>
+    <string name="btn4_name">TRANSCAT</string>
+    <string name="btn5_name">CUSTOM1</string>
+    <string name="btn6_name">CUSTOM2</string>
+</resources>
