@@ -7,5 +7,5 @@ import android.content.ContentValues;
  * Created by RobertZhou on 2018/6/22.
  */
 public interface DatabaseListener {
-    void onDatabaseOperationResult(String opsTypes, ContentValues[] results, long rowID);
+    void onDatabaseOperationResult(DatabaseHelper.OpsType opsTypes, ContentValues[] results, long rowID);
 }

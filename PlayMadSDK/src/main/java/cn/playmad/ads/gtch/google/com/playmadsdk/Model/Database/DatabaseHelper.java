@@ -23,14 +23,20 @@ import java.util.concurrent.Executors;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     /**
+     * Options type define by enum
+     */
+    public enum OpsType {
+        INSERT,
+        BULK,
+        UPDATE,
+        DELETE,
+        QUERY
+    }
+
+    /**
      * Constant
      */
     private static final int ENABLE_TRANSACTION_LIMITED = 50;
-    private static final String OPS_TYPE_INSERT = "insert";
-    private static final String OPS_TYPE_BULK = "bulk";
-    private static final String OPS_TYPE_UPDATE = "update";
-    private static final String OPS_TYPE_DELETE = "delete";
-    private static final String OPS_TYPE_QUERY = "query";
 
     /**
      * Member variables
@@ -96,15 +102,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     /**
      * Insert a data into a specified table by ContentValues collection
      *
-     * @param listener      callback listener
-     * @param contentValues a key-value collection object
-     * @param insertArgs    insert method arguments, @Nullable. {include: table, nullColumnHack}
+     * @param listener       callback listener
+     * @param table          the table to insert the row into
+     * @param nullColumnHack null column hack
+     * @param contentValues  a key-value collection object
      */
-    public void insert(DatabaseListener listener, ContentValues contentValues, String[]... insertArgs) {
+    public void insert(DatabaseListener listener, String table, String nullColumnHack,
+                       ContentValues contentValues) {
         if (listener != null) {
             setListeners(listener);
         }
-        opsDatabase(new ContentValues[]{contentValues}, insertArgs);
+        opsDatabase(OpsType.INSERT, table, new ContentValues[]{contentValues}, new
+                String[]{nullColumnHack});
     }
 
     /**
@@ -112,38 +121,42 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      * @param contentValues a key-value collection object array
      * @param insertArgs    insert method arguments, @Nullable. {include: table, nullColumnHack}
      */
-    public void bulkInsert(DatabaseListener listener, ContentValues[] contentValues, String[]... insertArgs) {
+    public void bulkInsert(DatabaseListener listener, String table, ContentValues[]
+            contentValues, String[]...
+                                   insertArgs) {
         if (listener != null) {
             setListeners(listener);
         }
-        opsDatabase(contentValues, insertArgs);
+        opsDatabase(OpsType.BULK, table, contentValues, insertArgs);
     }
 
     /**
      * Query data from table by selections
      *
      * @param listener  callback listener
-     * @param queryArgs query method arguments, @Nullable. {include: table, columns[], selection, selectionArgs[], groupBy, having,
+     * @param queryArgs query method arguments, @Nullable. {include: table, columns[], selection,
+     *                  selectionArgs[], groupBy, having,
      *                  orderBy, limit}
      */
-    public void query(DatabaseListener listener, String[]... queryArgs) {
+    public void query(DatabaseListener listener, String table, String[]... queryArgs) {
         if (listener != null) {
             setListeners(listener);
         }
-        opsDatabase(null, queryArgs);
+        opsDatabase(OpsType.QUERY, table, null, queryArgs);
     }
 
     /**
      * Delete data by delete args
      *
      * @param listener   callback listener
-     * @param deleteArgs delete method arguments, @Nullable,. {include: table, whereClause, whereArgs[]}
+     * @param deleteArgs delete method arguments, @Nullable,. {include: table, whereClause,
+     *                   whereArgs[]}
      */
-    public void delete(DatabaseListener listener, String[]... deleteArgs) {
+    public void delete(DatabaseListener listener, String table, String[]... deleteArgs) {
         if (listener != null) {
             setListeners(listener);
         }
-        opsDatabase(null, deleteArgs);
+        opsDatabase(OpsType.DELETE, table, null, deleteArgs);
     }
 
     /**
@@ -161,33 +174,54 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     /**
      * Database operation
      *
-     * @param values a key-value collection object array
-     * @param args   operation method arguments, @Nullable. {include: method, opsArgs[]}
+     * @param opsTypes type of operation database
+     * @param table    table name of operation database
+     * @param values   a key-value collection object array of operation data
+     * @param args     operation arguments, @Nullable.
      */
-    private void opsDatabase(final ContentValues[] values, final String[]... args) {
+    private void opsDatabase(final OpsType opsTypes, final String table, final ContentValues[] values, final
+    String[]... args) {
+        System.out.println("opsDatabase------>" + opsTypes.name());
         singleThreadPool.execute(new Runnable() {
             @Override
             public void run() {
                 openDatabase();
                 boolean enableTransaction = false;
                 try {
-                    switch (args[0][0]) {
-                        case OPS_TYPE_INSERT:
-                            long rowId = mDatabase.insert(args[1][0], args[2][0], values[0]);
-                            opsDatabaseCallback(args[0][0], null, rowId);
+                    switch (opsTypes) {
+                        case INSERT:
+                            opsDatabaseCallback(opsTypes, null, mDatabase.insert(table, args[0][0], values[0]));
                             break;
-                        case OPS_TYPE_BULK:
+                        case BULK:
                             break;
-                        case OPS_TYPE_UPDATE:
+                        case UPDATE:
                             break;
-                        case OPS_TYPE_DELETE:
-                            mDatabase.delete(args[1][0], args[2][0], args[3]);
+                        case DELETE:
+                            opsDatabaseCallback(opsTypes, null, mDatabase.delete(table, checkParameter(args[0]),
+                                    args[1]));
                             break;
-                        case OPS_TYPE_QUERY:
-                            Cursor result = mDatabase.query(args[1][0], args[2], args[3][0], args[4], args[5][0], args[6][0], args[7][0],
-                                    args[8][0]);
-                            opsDatabaseCallback(args[0][0], cursorConverToContentValues(result), result.getColumnCount());
-                            result.close();
+                        case QUERY:
+                            Cursor result = null;
+                            System.out.println("args_length:" + args.length);
+                            switch (args.length) {
+                                case 7:
+                                    if (args[1] == null) {
+                                        System.out.println("args[1] is " + checkParameter(args[1]));
+                                    }
+                                    result = mDatabase.query(table, args[0], checkParameter(args[1]), args[2],
+                                            checkParameter(args[3]), checkParameter(args[4]), checkParameter(args[5])
+                                            , checkParameter(args[6]));
+                                    break;
+                                case 8:
+                                    break;
+                                case 9:
+                                    break;
+                            }
+                            if (result != null) {
+                                opsDatabaseCallback(opsTypes, cursorConverToContentValues(result), result
+                                        .getColumnCount());
+                                result.close();
+                            }
                             break;
                         default:
                             break;
@@ -207,7 +241,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     /**
      * @param results
      */
-    private void opsDatabaseCallback(final String opsTypes, final ContentValues[] results, final long rowID) {
+    private void opsDatabaseCallback(final OpsType opsTypes, final ContentValues[] results, final
+    long rowID) {
         mainHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -258,7 +293,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      * @param columnName
      * @param contentValues
      */
-    private void getValueByColumnName(Cursor cursor, String columnName, ContentValues contentValues) {
+    private void getValueByColumnName(Cursor cursor, String columnName, ContentValues
+            contentValues) {
         int columnIndex = cursor.getColumnIndex(columnName);
         switch (getType(cursor, columnIndex)) {
             case 3:
@@ -303,4 +339,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         return type;
     }
+
+    private String checkParameter(String[] array) {
+        if (array == null) {
+            return null;
+        } else {
+            return array[0];
+        }
+    }
+
+//    private boolean isEmpty(String[][] array) {
+//        return (array == null || array.length == 0) || (array.length == 1 && array[0].length ==
+// 0);
+//    }
+//
+//    private void ParseParameters(Object... objects) {
+//        if (objects != null) {
+//            for (Object o : objects) {
+//            }
+//        }
+//    }
 }

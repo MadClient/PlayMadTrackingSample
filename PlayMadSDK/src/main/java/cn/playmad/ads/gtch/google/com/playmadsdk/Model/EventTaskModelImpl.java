@@ -37,7 +37,8 @@ public class EventTaskModelImpl implements EventTaskModel<ContentValues>, Advert
     private static final int DB_VERSION = 1;
     private static final String EVENTS_TABLE = "events";
     private static final String PRIMARY_KEY_NAME = "_id";
-    private static final String[] DB_TABLES = {"create table " + EVENTS_TABLE + "(" + PRIMARY_KEY_NAME + " integer primary key " +
+    private static final String[] DB_TABLES = {"create table " + EVENTS_TABLE + "(" + PRIMARY_KEY_NAME + " integer " +
+            "primary key " +
             "autoincrement,sid varchar(64),cat varchar(64),act varchar(64),lab varchar(64),val numeric(16,3),utc " +
             "varchar(20))"};
     private static final String PAGING_QUERY_NAMBER = "10";
@@ -62,7 +63,7 @@ public class EventTaskModelImpl implements EventTaskModel<ContentValues>, Advert
         new AdvertisingIdManager(this).execute(context);
         mActionEventQueue = new ConcurrentLinkedQueue<>();
         dbh = new DatabaseHelper(context, DB_NAME, DB_VERSION, DB_TABLES);
-        dbh.query(this, strToStrArray(EVENTS_TABLE), null, null, null, null, null, null, strToStrArray(PAGING_QUERY_NAMBER));
+        dbh.query(this, EVENTS_TABLE, null, null, null, null, null, null, strToStrArray(PAGING_QUERY_NAMBER));
         setAudienceInfo(context, mAudienceInfo);
         httpEngine = new HttpEngine();
     }
@@ -88,7 +89,7 @@ public class EventTaskModelImpl implements EventTaskModel<ContentValues>, Advert
     @Override
     public void addActionEventToCache(ContentValues contentValues) {
         mActionEventQueue.offer(contentValues);
-        dbh.insert(this, contentValues, strToStrArray(EVENTS_TABLE), null);
+        dbh.insert(this, EVENTS_TABLE, null, contentValues);
     }
 
     /**
@@ -228,15 +229,24 @@ public class EventTaskModelImpl implements EventTaskModel<ContentValues>, Advert
      * @param results Database operation result by ContentValues
      */
     @Override
-    public void onDatabaseOperationResult(String opsTypes, ContentValues[] results, long rowID) {
-        if (results != null && results.length != 0) {
-            System.out.println("onDatabaseOperationResult---------->ContentValues:" + rowID);
-            for (ContentValues contentValues : results) {
-                if (contentValues.containsKey(PRIMARY_KEY_NAME)) {
-                    contentValues.remove(PRIMARY_KEY_NAME);
+    public void onDatabaseOperationResult(DatabaseHelper.OpsType opsTypes, ContentValues[] results, long rowID) {
+        switch (opsTypes) {
+            case INSERT:
+                System.out.println("onDatabaseOperationResult---->opsTypes:" + opsTypes + "---->ContentValues:" +
+                        rowID);
+                break;
+            case QUERY:
+                if (results != null && results.length != 0) {
+                    System.out.println("onDatabaseOperationResult---->opsTypes:" + opsTypes + "---->ContentValues:" +
+                            results.length);
+                    for (ContentValues contentValue : results) {
+                        if (contentValue.containsKey(PRIMARY_KEY_NAME)) {
+                            contentValue.remove(PRIMARY_KEY_NAME);
+                        }
+                        mActionEventQueue.offer(contentValue);
+                    }
                 }
-                mActionEventQueue.offer(contentValues);
-            }
+                break;
         }
     }
 

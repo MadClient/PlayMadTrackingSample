@@ -32,9 +32,9 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
      * Constant
      */
     private static final String VERSION = "1.0.1.0322";
-    private static final String SERVER_API = "http://tracking.playmad.cn/api/madplay/tracking/event";
-    //    private static final String SERVER_API = "http://172.16.26.217:8080/api/playmad/engine/tracking/event";
-//    private static final String SERVER_API = "http://tracking.playmad.cn/api/playmad/engine/tracking/event";
+    //    private static final String SERVER_API = "http://tracking.playmad.cn/api/madplay/tracking/event";
+    private static final String SERVER_API = "http://172.16.26.217:8080/api/playmad/engine/tracking/event";
+    //    private static final String SERVER_API = "http://tracking.playmad.cn/api/playmad/engine/tracking/event";
     private static final int MAX_REQUEST_URL = 7000;
     private static final String LABEL_FIRSTOPEN = "FIRSTOPEN";
 
@@ -134,8 +134,9 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
     public void onSendEventFinish(int statusCode, Map<String, List<String>> header, InputStream body) {
         System.out.println("sendEvent:Thread is Main? - " + (Looper.getMainLooper() == Looper.myLooper()));
         System.out.println("----->HTTP Response Status Code: " + statusCode);
+        // 处理不是200的问题
         try {
-            if (header != null) {
+            if (statusCode == 200 && header != null) {
                 for (Map.Entry<String, List<String>> entry : header.entrySet()) {
                     for (int i = 0; i < entry.getValue().size(); i++) {
                         System.out.println(entry.getKey() + ":" + entry.getValue().get(i));
@@ -264,6 +265,8 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
                 for (int j = 0; j < args[i].length; j++) {
                     System.out.println("arguments" + i + " :" + args[i][j]);
                 }
+            } else {
+                System.out.println("arguments" + i + " :" + args[i]);
             }
         }
     }
