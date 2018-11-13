@@ -54,7 +54,7 @@ task makeJar(type: Jar, dependsOn: ['compileReleaseJavaWithJavac']) {
     // jar打包去除的目录和文件
     exclude('BuildConfig.class', 'R.class')
     // 去掉R$开头的文件
-    exclude{it.name.startsWith('R$');}
+    exclude{it.name.startsWith('R$')}
 }
 
 // 拷贝默认生成的jar
