@@ -76,9 +76,13 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
         this.view = view;
         this.mContext = context;
         model = new EventTaskModelImpl(context);
-        test(new String[]{"test1", "test2", "test3"}, null, new String[]{"item1", EventElements.CATEGORY.alias(), null});
+
+        // test
+        test(new String[]{"test1", "test2", "test3"}, null, new String[]{"item1", EventElements.CATEGORY.alias(),
+                null});
         String[][] str = {{"test1"}, {"test2", "test3"}};
         test(str);
+        test1(str, "test", new String[]{"test1", "test2", "test3"}, null);
     }
 
     /**
@@ -267,6 +271,17 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
                 }
             } else {
                 System.out.println("arguments" + i + " :" + args[i]);
+            }
+        }
+    }
+
+    private void test1(Object... args) {
+        System.out.println("Object length: "+args.length);
+        for (Object o : args) {
+            if (o != null) {
+                System.out.println("<----arguments Class type is: " + o.getClass() + "---->");
+            } else {
+                System.out.println("<----arguments is null!---->");
             }
         }
     }

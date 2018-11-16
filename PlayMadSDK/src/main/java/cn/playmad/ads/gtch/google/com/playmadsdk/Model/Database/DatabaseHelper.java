@@ -8,11 +8,14 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteCursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Build;
+import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -101,33 +104,31 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     /**
      * Insert a data into a specified table by ContentValues collection
+     * String table, String nullColumnHack, ContentValues contentValues
      *
-     * @param listener       callback listener
-     * @param table          the table to insert the row into
-     * @param nullColumnHack null column hack
-     * @param contentValues  a key-value collection object
+     * @param listener callback listener
+     *                 //     * @param table          the table to insert the row into
+     *                 //     * @param nullColumnHack null column hack
+     *                 //     * @param contentValues  a key-value collection object
      */
-    public void insert(DatabaseListener listener, String table, String nullColumnHack,
-                       ContentValues contentValues) {
+    public void insert(DatabaseListener listener, Object... insertArgs) {
         if (listener != null) {
             setListeners(listener);
         }
-        opsDatabase(OpsType.INSERT, table, new ContentValues[]{contentValues}, new
-                String[]{nullColumnHack});
+//        opsDatabase(OpsType.INSERT, table, new ContentValues[]{contentValues}, new String[]{nullColumnHack});
+        opsDatabase(OpsType.INSERT, insertArgs);
     }
 
     /**
-     * @param listener      callback listener
-     * @param contentValues a key-value collection object array
-     * @param insertArgs    insert method arguments, @Nullable. {include: table, nullColumnHack}
+     * @param listener   callback listener
+     *                   //     * @param contentValues a key-value collection object array
+     * @param insertArgs insert method arguments, @Nullable. {include: table, nullColumnHack}
      */
-    public void bulkInsert(DatabaseListener listener, String table, ContentValues[]
-            contentValues, String[]...
-                                   insertArgs) {
+    public void bulkInsert(DatabaseListener listener, Object... insertArgs) {
         if (listener != null) {
             setListeners(listener);
         }
-        opsDatabase(OpsType.BULK, table, contentValues, insertArgs);
+        opsDatabase(OpsType.BULK, insertArgs);
     }
 
     /**
@@ -138,11 +139,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      *                  selectionArgs[], groupBy, having,
      *                  orderBy, limit}
      */
-    public void query(DatabaseListener listener, String table, String[]... queryArgs) {
+    public void query(DatabaseListener listener, Object... queryArgs) {
         if (listener != null) {
             setListeners(listener);
         }
-        opsDatabase(OpsType.QUERY, table, null, queryArgs);
+        opsDatabase(OpsType.QUERY, queryArgs);
     }
 
     /**
@@ -152,11 +153,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      * @param deleteArgs delete method arguments, @Nullable,. {include: table, whereClause,
      *                   whereArgs[]}
      */
-    public void delete(DatabaseListener listener, String table, String[]... deleteArgs) {
+    public void delete(DatabaseListener listener, Object... deleteArgs) {
         if (listener != null) {
             setListeners(listener);
         }
-        opsDatabase(OpsType.DELETE, table, null, deleteArgs);
+        opsDatabase(OpsType.DELETE, deleteArgs);
     }
 
     /**
@@ -173,15 +174,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     /**
      * Database operation
+     * final String table, final ContentValues[] values, final
+     * Object[]... args
      *
      * @param opsTypes type of operation database
-     * @param table    table name of operation database
-     * @param values   a key-value collection object array of operation data
-     * @param args     operation arguments, @Nullable.
+     *                 //     * @param table    table name of operation database
+     *                 //     * @param values   a key-value collection object array of operation data
+     *                 //     * @param args     operation arguments, @Nullable.
      */
-    private void opsDatabase(final OpsType opsTypes, final String table, final ContentValues[] values, final
-    String[]... args) {
-        System.out.println("opsDatabase------>" + opsTypes.name());
+    private void opsDatabase(final OpsType opsTypes, final Object... opsArgs) {
+        System.out.println("opsDatabase---->" + opsTypes.name() + "---->opsArgs Length: " + opsArgs.length);
         singleThreadPool.execute(new Runnable() {
             @Override
             public void run() {
@@ -190,31 +192,47 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 try {
                     switch (opsTypes) {
                         case INSERT:
-                            opsDatabaseCallback(opsTypes, null, mDatabase.insert(table, args[0][0], values[0]));
+                            System.out.println("Database Insert---->Start");
+                            opsDatabaseCallback(opsTypes, null, mDatabase.insert((String) opsArgs[0], (String)
+                                    opsArgs[1], (ContentValues) opsArgs[2]));
                             break;
                         case BULK:
                             break;
                         case UPDATE:
                             break;
                         case DELETE:
-                            opsDatabaseCallback(opsTypes, null, mDatabase.delete(table, checkParameter(args[0]),
-                                    args[1]));
+                            System.out.println("Database Delete---->Start");
+                            opsDatabaseCallback(opsTypes, null, mDatabase.delete((String) opsArgs[0], (String)
+                                    opsArgs[1], objToStr((Object[]) opsArgs[2])));
                             break;
                         case QUERY:
                             Cursor result = null;
-                            System.out.println("args_length:" + args.length);
-                            switch (args.length) {
+                            System.out.println("Database Query---->Start");
+                            switch (opsArgs.length) {
                                 case 7:
-                                    if (args[1] == null) {
-                                        System.out.println("args[1] is " + checkParameter(args[1]));
-                                    }
-                                    result = mDatabase.query(table, args[0], checkParameter(args[1]), args[2],
-                                            checkParameter(args[3]), checkParameter(args[4]), checkParameter(args[5])
-                                            , checkParameter(args[6]));
+                                    result = mDatabase.query((String) opsArgs[0], objToStr((Object[]) opsArgs[1]),
+                                            (String) opsArgs[2], objToStr((Object[]) opsArgs[3]), (String)
+                                                    opsArgs[4], (String) opsArgs[5], (String) opsArgs[6]);
                                     break;
                                 case 8:
+                                    result = mDatabase.query((String) opsArgs[0], objToStr((Object[]) opsArgs[1]),
+                                            (String) opsArgs[2], objToStr((Object[]) opsArgs[3]), (String)
+                                                    opsArgs[4], (String) opsArgs[5], (String) opsArgs[6], (String)
+                                                    opsArgs[7]);
                                     break;
                                 case 9:
+                                    result = mDatabase.query((Boolean) opsArgs[0], (String) opsArgs[1], objToStr(
+                                            (Object[]) opsArgs[2]), (String) opsArgs[3], objToStr((Object[])
+                                            opsArgs[4]), (String) opsArgs[5], (String) opsArgs[6], (String)
+                                            opsArgs[7], (String) opsArgs[8]);
+                                    break;
+                                case 10:
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                                        result = mDatabase.query((Boolean) opsArgs[0], (String) opsArgs[1], objToStr(
+                                                (Object[]) opsArgs[2]), (String) opsArgs[3], objToStr((Object[])
+                                                opsArgs[4]), (String) opsArgs[5], (String) opsArgs[6], (String)
+                                                opsArgs[7], (String) opsArgs[8], (CancellationSignal) opsArgs[9]);
+                                    }
                                     break;
                             }
                             if (result != null) {
@@ -278,17 +296,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             while (queryResult.moveToNext()) {
                 ContentValues contentValues = new ContentValues();
                 for (String columnName : queryResult.getColumnNames()) {
+                    // Coversion cursor to contentvalues (Include '_id' key)
                     getValueByColumnName(queryResult, columnName, contentValues);
                 }
                 queryResults[valueIndex] = contentValues;
                 valueIndex++;
             }
+            // test
+//            for (ContentValues contentValue : queryResults) {
+//                for (Map.Entry<String, Object> item : contentValue.valueSet()) {
+//                    System.out.println("queryResults---->key: " + item.getKey() + ", value: " + item.getValue()
+//                            .toString());
+//                }
+//            }
             return queryResults;
         }
         return null;
     }
 
     /**
+     * Get value by column name from cursor
+     *
      * @param cursor
      * @param columnName
      * @param contentValues
@@ -340,11 +368,31 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return type;
     }
 
-    private String checkParameter(String[] array) {
-        if (array == null) {
-            return null;
+//    /**
+//     * @param array
+//     * @return
+//     */
+//    private String strParam(Object[] array) {
+//        if (array == null || array.length == 0) {
+//            return null;
+//        } else {
+//            return (String) array[0];
+//        }
+//    }
+
+    /**
+     * @param array
+     * @return
+     */
+    private String[] objToStr(Object[] array) {
+        if (array != null) {
+            String[] strs = new String[array.length];
+            for (int i = 0; i < array.length; i++) {
+                strs[i] = array[i].toString();
+            }
+            return strs;
         } else {
-            return array[0];
+            return null;
         }
     }
 

@@ -63,7 +63,7 @@ public class EventTaskModelImpl implements EventTaskModel<ContentValues>, Advert
         new AdvertisingIdManager(this).execute(context);
         mActionEventQueue = new ConcurrentLinkedQueue<>();
         dbh = new DatabaseHelper(context, DB_NAME, DB_VERSION, DB_TABLES);
-        dbh.query(this, EVENTS_TABLE, null, null, null, null, null, null, strToStrArray(PAGING_QUERY_NAMBER));
+        dbh.query(this, EVENTS_TABLE, null, null, null, null, null, null, PAGING_QUERY_NAMBER);
         setAudienceInfo(context, mAudienceInfo);
         httpEngine = new HttpEngine();
     }
@@ -234,12 +234,15 @@ public class EventTaskModelImpl implements EventTaskModel<ContentValues>, Advert
             case INSERT:
                 System.out.println("onDatabaseOperationResult---->opsTypes:" + opsTypes + "---->ContentValues:" +
                         rowID);
+                dbh.delete(this, EVENTS_TABLE, "_id IN(?,?,?)", new String[]{String.valueOf(rowID), String.valueOf
+                        (1), String.valueOf(2)});
                 break;
             case QUERY:
                 if (results != null && results.length != 0) {
                     System.out.println("onDatabaseOperationResult---->opsTypes:" + opsTypes + "---->ContentValues:" +
                             results.length);
                     for (ContentValues contentValue : results) {
+                        // Remove primary key
                         if (contentValue.containsKey(PRIMARY_KEY_NAME)) {
                             contentValue.remove(PRIMARY_KEY_NAME);
                         }
@@ -247,16 +250,10 @@ public class EventTaskModelImpl implements EventTaskModel<ContentValues>, Advert
                     }
                 }
                 break;
+            case DELETE:
+                System.out.println("onDatabaseOperationResult---->opsTypes:" + opsTypes + "---->ContentValues:" +
+                        rowID);
+                break;
         }
-    }
-
-    /**
-     * String generation string array
-     *
-     * @param string a string
-     * @return a string array
-     */
-    private String[] strToStrArray(String string) {
-        return new String[]{string};
     }
 }
