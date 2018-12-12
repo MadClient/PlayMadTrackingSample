@@ -59,13 +59,21 @@ public class EventTaskModelImpl implements EventTaskModel<ContentValues>, Advert
      */
     public EventTaskModelImpl(Context context) {
         mContext = context;
+        // Instantiated audience information
         mAudienceInfo = new HashMap<>();
+        // Initialize Advertising Id
         new AdvertisingIdManager(this).execute(context);
+        // Instantiated cache queue
         mActionEventQueue = new ConcurrentLinkedQueue<>();
+        // Initialize SQLite database helper
         dbh = new DatabaseHelper(context, DB_NAME, DB_VERSION, DB_TABLES);
-        dbh.query(this, EVENTS_TABLE, null, null, null, null, null, null, PAGING_QUERY_NAMBER);
-        setAudienceInfo(context, mAudienceInfo);
+        // Initialize HTTP engine
         httpEngine = new HttpEngine();
+        // Initialize audience tracking
+        setAudienceInfo(context, mAudienceInfo);
+        // Initialize localized cache
+//        dbh.query(this, EVENTS_TABLE, null, null, null, null, null, null, PAGING_QUERY_NAMBER);
+
     }
 
     /**
@@ -232,10 +240,13 @@ public class EventTaskModelImpl implements EventTaskModel<ContentValues>, Advert
     public void onDatabaseOperationResult(DatabaseHelper.OpsType opsTypes, ContentValues[] results, long rowID) {
         switch (opsTypes) {
             case INSERT:
-                System.out.println("onDatabaseOperationResult---->opsTypes:" + opsTypes + "---->ContentValues:" +
-                        rowID);
-                dbh.delete(this, EVENTS_TABLE, "_id IN(?,?,?)", new String[]{String.valueOf(rowID), String.valueOf
-                        (1), String.valueOf(2)});
+                System.out.println("onDatabaseOperationResult---->opsTypes:" + opsTypes + "---->ContentValues:" + rowID);
+                String KEY_ID = "_id";
+                String[] ids = {"4", "14", "18"};
+                System.out.println("ids length: " + (ids.length - 1));
+                System.out.println(new String(new char[ids.length - 1]).replace("\0", "?,"));
+                System.out.println(KEY_ID + " IN (" + new String(new char[ids.length - 1]).replace("\0", "?,") + "?)");
+                dbh.delete(this, EVENTS_TABLE, KEY_ID + " IN (" + new String(new char[ids.length - 1]).replace("\0", "?,") + "?)", ids);
                 break;
             case QUERY:
                 if (results != null && results.length != 0) {

@@ -193,38 +193,38 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     switch (opsTypes) {
                         case INSERT:
                             System.out.println("Database Insert---->Start");
-                            opsDatabaseCallback(opsTypes, null, mDatabase.insert((String) opsArgs[0], (String)
-                                    opsArgs[1], (ContentValues) opsArgs[2]));
+                            opsDatabaseCallback(opsTypes, null, mDatabase.insert((String) opsArgs[0], (String) opsArgs[1],
+                                    (ContentValues) opsArgs[2]));
                             break;
                         case BULK:
                             break;
                         case UPDATE:
+                            System.out.println("Database Update---->Start");
+                            opsDatabaseCallback(opsTypes, null, mDatabase.update((String) opsArgs[0], (ContentValues) opsArgs[1],
+                                    (String) opsArgs[2], objToStr((Object[]) opsArgs[3])));
                             break;
                         case DELETE:
                             System.out.println("Database Delete---->Start");
-                            opsDatabaseCallback(opsTypes, null, mDatabase.delete((String) opsArgs[0], (String)
-                                    opsArgs[1], objToStr((Object[]) opsArgs[2])));
+                            opsDatabaseCallback(opsTypes, null, mDatabase.delete((String) opsArgs[0], (String) opsArgs[1], objToStr(
+                                    (Object[]) opsArgs[2])));
                             break;
                         case QUERY:
                             Cursor result = null;
                             System.out.println("Database Query---->Start");
                             switch (opsArgs.length) {
                                 case 7:
-                                    result = mDatabase.query((String) opsArgs[0], objToStr((Object[]) opsArgs[1]),
-                                            (String) opsArgs[2], objToStr((Object[]) opsArgs[3]), (String)
-                                                    opsArgs[4], (String) opsArgs[5], (String) opsArgs[6]);
+                                    result = mDatabase.query((String) opsArgs[0], objToStr((Object[]) opsArgs[1]), (String) opsArgs[2],
+                                            objToStr((Object[]) opsArgs[3]), (String) opsArgs[4], (String) opsArgs[5], (String) opsArgs[6]);
                                     break;
                                 case 8:
-                                    result = mDatabase.query((String) opsArgs[0], objToStr((Object[]) opsArgs[1]),
-                                            (String) opsArgs[2], objToStr((Object[]) opsArgs[3]), (String)
-                                                    opsArgs[4], (String) opsArgs[5], (String) opsArgs[6], (String)
-                                                    opsArgs[7]);
+                                    result = mDatabase.query((String) opsArgs[0], objToStr((Object[]) opsArgs[1]), (String) opsArgs[2],
+                                            objToStr((Object[]) opsArgs[3]), (String) opsArgs[4], (String) opsArgs[5], (String)
+                                                    opsArgs[6], (String) opsArgs[7]);
                                     break;
                                 case 9:
-                                    result = mDatabase.query((Boolean) opsArgs[0], (String) opsArgs[1], objToStr(
-                                            (Object[]) opsArgs[2]), (String) opsArgs[3], objToStr((Object[])
-                                            opsArgs[4]), (String) opsArgs[5], (String) opsArgs[6], (String)
-                                            opsArgs[7], (String) opsArgs[8]);
+                                    result = mDatabase.query((Boolean) opsArgs[0], (String) opsArgs[1], objToStr((Object[]) opsArgs[2]),
+                                            (String) opsArgs[3], objToStr((Object[]) opsArgs[4]), (String) opsArgs[5], (String)
+                                                    opsArgs[6], (String) opsArgs[7], (String) opsArgs[8]);
                                     break;
                                 case 10:
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
@@ -236,8 +236,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                                     break;
                             }
                             if (result != null) {
-                                opsDatabaseCallback(opsTypes, cursorConverToContentValues(result), result
-                                        .getColumnCount());
+                                opsDatabaseCallback(opsTypes, cursorConverToContentValues(result), result.getColumnCount());
                                 result.close();
                             }
                             break;

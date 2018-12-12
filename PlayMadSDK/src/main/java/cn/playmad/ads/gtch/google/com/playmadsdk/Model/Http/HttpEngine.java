@@ -179,8 +179,7 @@ public class HttpEngine implements HttpRequest {
      * @param header common request header field for https
      * @param body   common request body field for https
      */
-    private void issueHttps(final String method, final String url, final Map<String, List<String>> header, final
-    byte[] body) {
+    private void issueHttps(final String method, final String url, final Map<String, List<String>> header, final byte[] body) {
         cachedThreadPool.execute(new Runnable() {
             @Override
             public void run() {

@@ -9,6 +9,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
     //    private static final String SERVER_API = "http://tracking.playmad.cn/api/playmad/engine/tracking/event";
     private static final int MAX_REQUEST_URL = 7000;
     private static final String LABEL_FIRSTOPEN = "FIRSTOPEN";
+    private static final String SESSION_NAME = "sessionId";
 
 
     /**
@@ -78,11 +80,11 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
         model = new EventTaskModelImpl(context);
 
         // test
-        test(new String[]{"test1", "test2", "test3"}, null, new String[]{"item1", EventElements.CATEGORY.alias(),
-                null});
-        String[][] str = {{"test1"}, {"test2", "test3"}};
-        test(str);
-        test1(str, "test", new String[]{"test1", "test2", "test3"}, null);
+//        test(new String[]{"test1", "test2", "test3"}, null, new String[]{"item1", EventElements.CATEGORY.alias(),
+//                null});
+//        String[][] str = {{"test1"}, {"test2", "test3"}};
+//        test(str);
+//        test1(str, "test", new String[]{"test1", "test2", "test3"}, null);
     }
 
     /**
@@ -99,7 +101,7 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
         // SDK management events cycles according to session id
         String sessionid;
         if (mLifeCycle != null && !mLifeCycle.isEmpty()) {
-            sessionid = mLifeCycle.get("sessionid");
+            sessionid = mLifeCycle.get(SESSION_NAME);
             if (sessionid == null) {
                 sessionid = "";
             }
@@ -140,25 +142,25 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
         System.out.println("----->HTTP Response Status Code: " + statusCode);
         // 处理不是200的问题
         try {
-            if (statusCode == 200 && header != null) {
-                for (Map.Entry<String, List<String>> entry : header.entrySet()) {
-                    for (int i = 0; i < entry.getValue().size(); i++) {
-                        System.out.println(entry.getKey() + ":" + entry.getValue().get(i));
-                    }
+            // print info
+            for (Map.Entry<String, List<String>> entry : header.entrySet()) {
+                for (int i = 0; i < entry.getValue().size(); i++) {
+                    System.out.println(entry.getKey() + ":" + entry.getValue().get(i));
                 }
-
-                if (mLifeCycle == null) {
-                    mLifeCycle = new HashMap<>();
-                }
-                String[] cookie = header.get("Set-Cookie").get(0).split(";");
-                if (cookie.length > 0) {
-                    for (String s : cookie) {
-                        String[] kv = s.split("=");
-                        if (kv.length > 0) {
-                            mLifeCycle.put(kv[0].trim().toLowerCase(), kv[1].trim());
-                        }
-                    }
-                }
+            }
+            switch (statusCode) {
+                case 200: // Success
+                    setLifeCycle(header);
+                    break;
+                case 400: // Failure
+                    break;
+                case 401: // Unauthorized
+                    setLifeCycle(header);
+                    break;
+                case 403: // Forbidden
+                    break;
+                default:
+                    break;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -263,6 +265,38 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
         return actionEvent;
     }
 
+    /**
+     * Setting life cycle for session of cookie
+     *
+     * @param header response header
+     */
+    private void setLifeCycle(Map<String, List<String>> header) {
+        if (mLifeCycle == null) {
+            mLifeCycle = new HashMap<>();
+        }
+        List<String> cookies = header.get("Set-Cookie");
+        for (String cookie : cookies) {
+//            if (Arrays.asList(cookie).contains(SESSION_NAME)){
+//                System.out.println("Arrays.asList find cookies have SESSION_NAME");
+//            }
+            if (cookie.contains(SESSION_NAME)) {
+                System.out.println("cookie String find cookies have SESSION_NAME");
+                String[] attrs = cookie.split(";");
+                for (String attr : attrs) {
+                    String[] kv = attr.split("=");
+                    if (kv.length > 0) {
+                        mLifeCycle.put(kv[0].trim().toLowerCase(), kv[1].trim());
+//                    if (kv[0].equals(SESSION_NAME) && mLifeCycle.get(SESSION_NAME).equals(kv[1])) {
+//                        continue;
+//                    } else {
+//                        mLifeCycle.put(kv[0].trim().toLowerCase(), kv[1].trim());
+//                    }
+                    }
+                }
+            }
+        }
+    }
+
     private void test(String[]... args) {
         for (int i = 0; i < args.length; i++) {
             if (args[i] != null) {
@@ -276,7 +310,7 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
     }
 
     private void test1(Object... args) {
-        System.out.println("Object length: "+args.length);
+        System.out.println("Object length: " + args.length);
         for (Object o : args) {
             if (o != null) {
                 System.out.println("<----arguments Class type is: " + o.getClass() + "---->");
