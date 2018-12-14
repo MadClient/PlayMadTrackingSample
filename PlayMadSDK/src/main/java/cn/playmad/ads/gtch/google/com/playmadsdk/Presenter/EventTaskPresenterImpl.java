@@ -99,21 +99,13 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
     public void addEvents(String category, String action, String label, Number value) {
         System.out.println("Advertising Id---------->" + model.getAudienceInfo().get("aid"));
         // SDK management events cycles according to session id
-        String sessionid;
-        if (mLifeCycle != null && !mLifeCycle.isEmpty()) {
-            sessionid = mLifeCycle.get(SESSION_NAME);
-            if (sessionid == null) {
-                sessionid = "";
-            }
-        } else {
-            sessionid = "";
-        }
+
         // First open or application is activated
         if (action.equals(Constants.EventActions.OPEN.name()) && model.isActivated()) {
             label = LABEL_FIRSTOPEN;
         }
         // Add action events to cache mechanism
-        model.addActionEventToCache(generateActionEvent(sessionid, category, action, label, value));
+        model.addActionEventToCache(generateActionEvent(getLifeCycle(), category, action, label, value));
         sendActionEventToServer();
     }
 
@@ -276,25 +268,43 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
         }
         List<String> cookies = header.get("Set-Cookie");
         for (String cookie : cookies) {
-//            if (Arrays.asList(cookie).contains(SESSION_NAME)){
-//                System.out.println("Arrays.asList find cookies have SESSION_NAME");
-//            }
             if (cookie.contains(SESSION_NAME)) {
                 System.out.println("cookie String find cookies have SESSION_NAME");
                 String[] attrs = cookie.split(";");
                 for (String attr : attrs) {
-                    String[] kv = attr.split("=");
-                    if (kv.length > 0) {
-                        mLifeCycle.put(kv[0].trim().toLowerCase(), kv[1].trim());
-//                    if (kv[0].equals(SESSION_NAME) && mLifeCycle.get(SESSION_NAME).equals(kv[1])) {
-//                        continue;
-//                    } else {
-//                        mLifeCycle.put(kv[0].trim().toLowerCase(), kv[1].trim());
-//                    }
+                    System.out.println(attr);
+                    System.out.println("Session ID:" + getLifeCycle());
+                    System.out.println(String.valueOf(!getLifeCycle().isEmpty()));
+                    System.out.println(String.valueOf(!attr.contains(getLifeCycle())));
+                    if (!getLifeCycle().isEmpty()) {
+                        if (attr.contains(getLifeCycle())) {
+                            System.out.println("Session Id same prev! Not done.");
+                            break;
+                        }
+                        String[] kv = attr.split("=");
+                        if (kv.length > 0) {
+                            mLifeCycle.put(kv[0].trim(), kv[1].trim());
+                        }
                     }
                 }
             }
         }
+    }
+
+    /**
+     * @return
+     */
+    private String getLifeCycle() {
+        String sessionid;
+        if (mLifeCycle != null && !mLifeCycle.isEmpty()) {
+            sessionid = mLifeCycle.get(SESSION_NAME);
+            if (sessionid == null) {
+                sessionid = "";
+            }
+        } else {
+            sessionid = "";
+        }
+        return sessionid;
     }
 
     private void test(String[]... args) {
