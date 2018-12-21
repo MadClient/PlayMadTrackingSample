@@ -9,7 +9,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +37,9 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
     //    private static final String SERVER_API = "http://tracking.playmad.cn/api/playmad/engine/tracking/event";
     private static final int MAX_REQUEST_URL = 7000;
     private static final String LABEL_FIRSTOPEN = "FIRSTOPEN";
-    private static final String SESSION_NAME = "sessionId";
+    private static final String SESSIONID = "sessionId";
+    private static final String TIMESTAMP = "Timestamp";
+    private static final String MAXAGE = "Max-Age";
 
 
     /**
@@ -98,14 +99,12 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
     @Override
     public void addEvents(String category, String action, String label, Number value) {
         System.out.println("Advertising Id---------->" + model.getAudienceInfo().get("aid"));
-        // SDK management events cycles according to session id
-
         // First open or application is activated
         if (action.equals(Constants.EventActions.OPEN.name()) && model.isActivated()) {
             label = LABEL_FIRSTOPEN;
         }
         // Add action events to cache mechanism
-        model.addActionEventToCache(generateActionEvent(getLifeCycle(), category, action, label, value));
+        model.addActionEventToCache(generateActionEvent(getSessionId(), category, action, label, value));
         sendActionEventToServer();
     }
 
@@ -268,24 +267,22 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
         }
         List<String> cookies = header.get("Set-Cookie");
         for (String cookie : cookies) {
-            if (cookie.contains(SESSION_NAME)) {
-                System.out.println("cookie String find cookies have SESSION_NAME");
-                String[] attrs = cookie.split(";");
-                for (String attr : attrs) {
-                    System.out.println(attr);
-                    System.out.println("Session ID:" + getLifeCycle());
-                    System.out.println(String.valueOf(!getLifeCycle().isEmpty()));
-                    System.out.println(String.valueOf(!attr.contains(getLifeCycle())));
-                    if (!getLifeCycle().isEmpty()) {
-                        if (attr.contains(getLifeCycle())) {
-                            System.out.println("Session Id same prev! Not done.");
-                            break;
-                        }
+            if (cookie.contains(SESSIONID)) {
+                System.out.println("cookie String find cookies have SESSIONID");
+                // If the session doesn't exist or isn't same as the latest by server, the
+                // session period will be reset.
+                if (!cookie.contains(getSessionId()) || getSessionId().isEmpty()) {
+                    System.out.println("Session ID:" + getSessionId());
+                    System.out.println(String.valueOf(getSessionId().isEmpty()));
+                    System.out.println(String.valueOf(!cookie.contains(getSessionId())));
+                    String[] attrs = cookie.split(";");
+                    for (String attr : attrs) {
                         String[] kv = attr.split("=");
                         if (kv.length > 0) {
                             mLifeCycle.put(kv[0].trim(), kv[1].trim());
                         }
                     }
+                    mLifeCycle.put(TIMESTAMP, AudienceTrackHelper.getUTC());
                 }
             }
         }
@@ -294,12 +291,20 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
     /**
      * @return
      */
-    private String getLifeCycle() {
-        String sessionid;
+    private String getSessionId() {
+        String sessionid, timestamp, maxage;
         if (mLifeCycle != null && !mLifeCycle.isEmpty()) {
-            sessionid = mLifeCycle.get(SESSION_NAME);
+            sessionid = mLifeCycle.get(SESSIONID);
             if (sessionid == null) {
                 sessionid = "";
+            } else {
+                maxage = mLifeCycle.get(MAXAGE);
+                timestamp = mLifeCycle.get(TIMESTAMP);
+                System.out.println("mLifeCycle---->" + String.valueOf((Long.parseLong(AudienceTrackHelper.getUTC()) - Long.parseLong
+                        (timestamp)) / 1000));
+                if ((Long.parseLong(AudienceTrackHelper.getUTC()) - Long.parseLong(timestamp)) / 1000 > Long.parseLong(maxage)) {
+                    mLifeCycle.clear();
+                }
             }
         } else {
             sessionid = "";
