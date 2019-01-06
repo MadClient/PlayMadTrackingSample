@@ -33,8 +33,8 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
      */
     private static final String VERSION = "1.0.1.0322";
     //    private static final String SERVER_API = "http://tracking.playmad.cn/api/madplay/tracking/event";
-    private static final String SERVER_API = "http://172.16.26.217:8080/api/playmad/engine/tracking/event";
-    //    private static final String SERVER_API = "http://tracking.playmad.cn/api/playmad/engine/tracking/event";
+//    private static final String SERVER_API = "http://172.16.26.217:8080/api/playmad/engine/tracking/event";
+    private static final String SERVER_API = "http://tracking.playmad.cn/api/playmad/engine/tracking/event";
     private static final int MAX_REQUEST_URL = 7000;
     private static final String LABEL_FIRSTOPEN = "FIRSTOPEN";
     private static final String SESSIONID = "sessionId";
@@ -269,12 +269,11 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
         for (String cookie : cookies) {
             if (cookie.contains(SESSIONID)) {
                 System.out.println("cookie String find cookies have SESSIONID");
-                // If the session doesn't exist or isn't same as the latest by server, the
-                // session period will be reset.
-                if (!cookie.contains(getSessionId()) || getSessionId().isEmpty()) {
-                    System.out.println("Session ID:" + getSessionId());
+                // If the session doesn't exist or isn't same as the latest by server, the session period will be reset.
+                boolean diffSessioId = true;
+                if (getSessionId().isEmpty() || (diffSessioId = !cookie.contains(getSessionId()))) {
                     System.out.println(String.valueOf(getSessionId().isEmpty()));
-                    System.out.println(String.valueOf(!cookie.contains(getSessionId())));
+                    System.out.println(String.valueOf(diffSessioId));
                     String[] attrs = cookie.split(";");
                     for (String attr : attrs) {
                         String[] kv = attr.split("=");
@@ -282,7 +281,11 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
                             mLifeCycle.put(kv[0].trim(), kv[1].trim());
                         }
                     }
-                    mLifeCycle.put(TIMESTAMP, AudienceTrackHelper.getUTC());
+                    // need test for not empty or same
+                    if (diffSessioId) {
+                        mLifeCycle.put(TIMESTAMP, AudienceTrackHelper.getUTC());
+                    }
+                    test2(mLifeCycle);
                 }
             }
         }
@@ -300,10 +303,14 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
             } else {
                 maxage = mLifeCycle.get(MAXAGE);
                 timestamp = mLifeCycle.get(TIMESTAMP);
-                System.out.println("mLifeCycle---->" + String.valueOf((Long.parseLong(AudienceTrackHelper.getUTC()) - Long.parseLong
-                        (timestamp)) / 1000));
-                if ((Long.parseLong(AudienceTrackHelper.getUTC()) - Long.parseLong(timestamp)) / 1000 > Long.parseLong(maxage)) {
-                    mLifeCycle.clear();
+                try {
+                    // Calculate whether the session times out，empty after timeout
+                    if ((Long.parseLong(AudienceTrackHelper.getUTC()) - Long.parseLong(timestamp)) / 1000 > Long
+                            .parseLong(maxage)) {
+                        mLifeCycle.clear();
+                    }
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
                 }
             }
         } else {
@@ -332,6 +339,12 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
             } else {
                 System.out.println("<----arguments is null!---->");
             }
+        }
+    }
+
+    private void test2(Map<String, String> map) {
+        for (String key : map.keySet()) {
+            System.out.println("LifeCycle Content---->" + key + ":" + map.get(key));
         }
     }
 
