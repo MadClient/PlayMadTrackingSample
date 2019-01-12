@@ -1,14 +1,22 @@
 package cn.playmad.ads.gtch.google.com.playmadsdk.Presenter;
 
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.os.Looper;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,6 +94,7 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
 //        String[][] str = {{"test1"}, {"test2", "test3"}};
 //        test(str);
 //        test1(str, "test", new String[]{"test1", "test2", "test3"}, null);
+        test3(context, "cn.playmad.playmadtrackingsample");
     }
 
     /**
@@ -270,10 +279,7 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
             if (cookie.contains(SESSIONID)) {
                 System.out.println("cookie String find cookies have SESSIONID");
                 // If the session doesn't exist or isn't same as the latest by server, the session period will be reset.
-                boolean diffSessioId = true;
-                if (getSessionId().isEmpty() || (diffSessioId = !cookie.contains(getSessionId()))) {
-                    System.out.println(String.valueOf(getSessionId().isEmpty()));
-                    System.out.println(String.valueOf(diffSessioId));
+                if (getSessionId().isEmpty() || !cookie.contains(getSessionId())) {
                     String[] attrs = cookie.split(";");
                     for (String attr : attrs) {
                         String[] kv = attr.split("=");
@@ -281,18 +287,17 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
                             mLifeCycle.put(kv[0].trim(), kv[1].trim());
                         }
                     }
-                    // need test for not empty or same
-                    if (diffSessioId) {
-                        mLifeCycle.put(TIMESTAMP, AudienceTrackHelper.getUTC());
-                    }
-                    test2(mLifeCycle);
+                    mLifeCycle.put(TIMESTAMP, AudienceTrackHelper.getUTC());
+//                    test2(mLifeCycle);
                 }
             }
         }
     }
 
     /**
-     * @return
+     * Return a valid session identifier
+     *
+     * @return a valid session identifier or empty string
      */
     private String getSessionId() {
         String sessionid, timestamp, maxage;
@@ -305,8 +310,7 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
                 timestamp = mLifeCycle.get(TIMESTAMP);
                 try {
                     // Calculate whether the session times out，empty after timeout
-                    if ((Long.parseLong(AudienceTrackHelper.getUTC()) - Long.parseLong(timestamp)) / 1000 > Long
-                            .parseLong(maxage)) {
+                    if ((Long.parseLong(AudienceTrackHelper.getUTC()) - Long.parseLong(timestamp)) / 1000 > Long.parseLong(maxage)) {
                         mLifeCycle.clear();
                     }
                 } catch (NumberFormatException e) {
@@ -348,5 +352,37 @@ public class EventTaskPresenterImpl implements EventTaskPresenter, EventTaskList
         }
     }
 
+    @SuppressLint("PackageManagerGetSignatures")
+    private void test3(Context context, String pkgname) {
+        PackageInfo packageInfo = null;
+        try {
+            packageInfo = context.getPackageManager().getPackageInfo(pkgname, PackageManager.GET_SIGNATURES);
+            Signature[] signatures = packageInfo.signatures;
+            for (Signature signature : signatures) {
+                parseSignature(signature.toByteArray());
+//                System.out.println(signature.toCharsString());
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
 
+    }
+
+    private void parseSignature(byte[] signature) {
+        try {
+            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+            X509Certificate cert = (X509Certificate) certFactory.generateCertificate(new ByteArrayInputStream(signature));
+            String pubKey = cert.getPublicKey().toString();
+            String signNumber = cert.getSerialNumber().toString();
+            cert.getVersion();
+            System.out.println("signName:" + cert.getSigAlgName());
+            System.out.println("pubKey:" + pubKey);
+            System.out.println("signNumber:" + signNumber);
+            System.out.println("subjectDN:" + cert.getSubjectDN().toString());
+            System.out.println("Type:" + cert.getType());
+            System.out.println("Version:" + cert.getVersion());
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        }
+    }
 }
